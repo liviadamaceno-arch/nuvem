@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuvem de Dados com Splash</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #050810;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Nuvem composta por borrões */
+        .cloud-wrap {
+            position: relative;
+            width: 300px;
+            height: 120px;
+            margin-top: 40px;
+            filter: blur(15px); /* O segredo do borrão */
+            opacity: 0.8;
+            z-index: 2;
+        }
+
+        .blur-blob {
+            position: absolute;
+            background: #60a5fa;
+            border-radius: 50%;
+        }
+
+        /* Criando o formato da nuvem com borrões aleatórios */
+        .blob1 { width: 120px; height: 120px; left: 20px; top: 10px; }
+        .blob2 { width: 150px; height: 100px; left: 80px; top: -10px; background: #93c5fd; }
+        .blob3 { width: 100px; height: 100px; left: 180px; top: 20px; }
+        .blob4 { width: 130px; height: 60px; left: 100px; top: 50px; background: #3b82f6; }
+
+        canvas {
+            position: absolute;
+            top: 100px; /* Alinhado com a nuvem */
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cloud-wrap">
+        <div class="blur-blob blob1"></div>
+        <div class="blur-blob blob2"></div>
+        <div class="blur-blob blob3"></div>
+        <div class="blur-blob blob4"></div>
+    </div>
+
+    <canvas id="rainCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('rainCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - 100;
+
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        const blues = ["#38bdf8", "#0ea5e9", "#2563eb", "#60a5fa", "#1d4ed8"];
+        
+        const drops = [];
+        const splashes = [];
+
+        class Drop {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                // As gotas nascem na largura da nuvem (centro da tela)
+                this.x = (canvas.width / 2 - 120) + Math.random() * 240;
+                this.y = 0;
+                this.speed = 4 + Math.random() * 5;
+                this.char = chars[Math.floor(Math.random() * chars.length)];
+                this.color = blues[Math.floor(Math.random() * blues.length)];
+                this.fontSize = 12 + Math.random() * 10;
+            }
+
+            update() {
+                this.y += this.speed;
+
+                // Se atingir o "chão" (final do canvas)
+                if (this.y >= canvas.height - 20) {
+                    this.createSplash();
+                    this.reset();
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.font = `${this.fontSize}px monospace`;
+                ctx.fillText(this.char, this.x, this.y);
+            }
+
+            createSplash() {
+                for (let i = 0; i < 5; i++) {
+                    splashes.push(new Splash(this.x, canvas.height - 20, this.color));
+                }
+            }
+        }
+
+        class Splash {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = -Math.random() * 3;
+                this.life = 1.0; // Opacidade inicial
+                this.char = chars[Math.floor(Math.random() * chars.length)];
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.1; // Gravidade no splash
+                this.life -= 0.03; // Vai sumindo
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.font = "10px monospace";
+                ctx.fillText(this.char, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        // Inicializa gotas
+        for (let i = 0; i < 40; i++) {
+            drops.push(new Drop());
+        }
+
+        function animate() {
+            // Fundo semi-transparente para o efeito de rastro
+            ctx.fillStyle = "rgba(5, 8, 16, 0.2)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Atualiza e desenha gotas
+            drops.forEach(drop => {
+                drop.update();
+                drop.draw();
+            });
+
+            // Atualiza e desenha splashes, removendo os "mortos"
+            for (let i = splashes.length - 1; i >= 0; i--) {
+                splashes[i].update();
+                splashes[i].draw();
+                if (splashes[i].life <= 0) {
+                    splashes.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // Ajuste de janela
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 100;
+        });
+    </script>
+</body>
+</html>
